@@ -1,8 +1,8 @@
 library interactiveviewer_gallery;
 
 import 'package:flutter/material.dart';
-import './custom_dismissible.dart';
 import './interactive_viewer_boundary.dart';
+import 'interactive_viewer.dart' as custom;
 
 /// Builds a carousel controlled by a [PageView] for the tweet media sources.
 ///
@@ -51,7 +51,7 @@ class InteractiveviewerGallery<T> extends StatefulWidget {
 class _TweetSourceGalleryState extends State<InteractiveviewerGallery>
     with SingleTickerProviderStateMixin {
   PageController? _pageController;
-  TransformationController? _transformationController;
+  custom.TransformationController? _transformationController;
 
   /// The controller to animate the transformation value of the
   /// [InteractiveViewer] when it should reset.
@@ -75,7 +75,7 @@ class _TweetSourceGalleryState extends State<InteractiveviewerGallery>
 
     _pageController = PageController(initialPage: widget.initIndex);
 
-    _transformationController = TransformationController();
+    _transformationController = custom.TransformationController();
 
     _animationController = AnimationController(
       vsync: this,
@@ -203,25 +203,22 @@ class _TweetSourceGalleryState extends State<InteractiveviewerGallery>
       onNoBoundaryHit: _onNoBoundaryHit,
       maxScale: widget.maxScale,
       minScale: widget.minScale,
-      child: CustomDismissible(
-        onDismissed: () => Navigator.of(context).pop(),
-        enableDragToDismiss: _enableDismiss,
-        child: PageView.builder(
-          onPageChanged: _onPageChanged,
-          controller: _pageController,
-          physics:
-              _enablePageView ? null : const NeverScrollableScrollPhysics(),
-          itemCount: widget.sources.length,
-          itemBuilder: (BuildContext context, int index) {
-            return GestureDetector(
-              onDoubleTapDown: (TapDownDetails details) {
-                _doubleTapLocalPosition = details.localPosition;
-              },
-              onDoubleTap: onDoubleTap,
-              child: widget.itemBuilder(context, index, index == currentIndex),
-            );
-          },
-        ),
+      onDismissed: () => Navigator.of(context).pop(),
+      enableDragToDismiss: _enableDismiss,
+      child: PageView.builder(
+        onPageChanged: _onPageChanged,
+        controller: _pageController,
+        physics: _enablePageView ? null : const NeverScrollableScrollPhysics(),
+        itemCount: widget.sources.length,
+        itemBuilder: (BuildContext context, int index) {
+          return GestureDetector(
+            onDoubleTapDown: (TapDownDetails details) {
+              _doubleTapLocalPosition = details.localPosition;
+            },
+            onDoubleTap: onDoubleTap,
+            child: widget.itemBuilder(context, index, index == currentIndex),
+          );
+        },
       ),
     );
   }

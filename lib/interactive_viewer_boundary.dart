@@ -1,3 +1,4 @@
+import 'interactive_viewer.dart' as custom;
 import 'package:flutter/material.dart';
 
 /// A callback for the [InteractiveViewerBoundary] that is called when the scale
@@ -18,9 +19,16 @@ class InteractiveViewerBoundary extends StatefulWidget {
     this.onLeftBoundaryHit,
     this.onRightBoundaryHit,
     this.onNoBoundaryHit,
-    this.maxScale,
-    this.minScale,
+    required this.maxScale,
+    required this.minScale,
+    this.onDismissed,
+    this.dismissThreshold = 0.2,
+    this.enableDragToDismiss = true,
   });
+
+  final double dismissThreshold;
+  final VoidCallback? onDismissed;
+  final bool enableDragToDismiss;
 
   final Widget child;
 
@@ -31,7 +39,7 @@ class InteractiveViewerBoundary extends StatefulWidget {
   final double boundaryWidth;
 
   /// The [TransformationController] for the [InteractiveViewer].
-  final TransformationController? controller;
+  final custom.TransformationController? controller;
 
   /// Called when the scale changed after an interaction ended.
   final ScaleChanged? onScaleChanged;
@@ -45,32 +53,129 @@ class InteractiveViewerBoundary extends StatefulWidget {
   /// Called when no boundary has been hit after an interaction ended.
   final VoidCallback? onNoBoundaryHit;
 
-  final double? maxScale;
+  final double maxScale;
 
-  final double? minScale;
+  final double minScale;
 
   @override
   InteractiveViewerBoundaryState createState() =>
       InteractiveViewerBoundaryState();
 }
 
-class InteractiveViewerBoundaryState extends State<InteractiveViewerBoundary> {
-  TransformationController? _controller;
+class InteractiveViewerBoundaryState extends State<InteractiveViewerBoundary>
+    with SingleTickerProviderStateMixin {
+  custom.TransformationController? _controller;
 
   double? _scale;
+
+  late AnimationController _animateController;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<Decoration> _opacityAnimation;
+
+  Offset _offset = Offset.zero;
+  bool _dragging = false;
+
+  bool get _isActive => _dragging || _animateController.isAnimating;
 
   @override
   void initState() {
     super.initState();
 
-    _controller = widget.controller ?? TransformationController();
+    _controller = widget.controller ?? custom.TransformationController();
+
+    _animateController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _updateMoveAnimation();
   }
 
   @override
   void dispose() {
     _controller!.dispose();
+    _animateController.dispose();
 
     super.dispose();
+  }
+
+  void _updateMoveAnimation() {
+    final double endX = _offset.dx.sign * (_offset.dx.abs() / _offset.dy.abs());
+    final double endY = _offset.dy.sign;
+
+    _slideAnimation = _animateController.drive(
+      Tween<Offset>(
+        begin: Offset.zero,
+        end: Offset(endX, endY),
+      ),
+    );
+
+    _scaleAnimation = _animateController.drive(
+      Tween<double>(
+        begin: 1,
+        end: 0.25,
+      ),
+    );
+
+    _opacityAnimation = _animateController.drive(
+      DecorationTween(
+        begin: const BoxDecoration(
+          color: Colors.black,
+        ),
+        end: const BoxDecoration(
+          color: Colors.transparent,
+        ),
+      ),
+    );
+  }
+
+  void _handleDragStart(ScaleStartDetails details) {
+    _dragging = true;
+
+    if (_animateController.isAnimating) {
+      _animateController.stop();
+    } else {
+      _offset = Offset.zero;
+      _animateController.value = 0.0;
+    }
+    setState(_updateMoveAnimation);
+  }
+
+  void _handleDragUpdate(ScaleUpdateDetails details) {
+    if (!_isActive || _animateController.isAnimating) {
+      return;
+    }
+
+    _offset += details.focalPointDelta;
+
+    setState(_updateMoveAnimation);
+
+    if (!_animateController.isAnimating) {
+      _animateController.value = _offset.dy.abs() / context.size!.height;
+    }
+  }
+
+  void _handleDragEnd(ScaleEndDetails details) {
+    if (!_isActive || _animateController.isAnimating) {
+      return;
+    }
+
+    _dragging = false;
+
+    if (_animateController.isCompleted) {
+      return;
+    }
+
+    if (!_animateController.isDismissed) {
+      // if the dragged value exceeded the dismissThreshold, call onDismissed
+      // else animate back to initial position.
+      if (_animateController.value > widget.dismissThreshold) {
+        widget.onDismissed?.call();
+      } else {
+        _animateController.reverse();
+      }
+    }
   }
 
   void _updateBoundaryDetection() {
@@ -103,14 +208,28 @@ class InteractiveViewerBoundaryState extends State<InteractiveViewerBoundary> {
     }
   }
 
+  Widget get content => DecoratedBoxTransition(
+        decoration: _opacityAnimation,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: widget.child,
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
-    return InteractiveViewer(
-      maxScale: widget.maxScale!,
-      minScale: widget.minScale!,
+    return custom.InteractiveViewer(
+      maxScale: widget.maxScale,
+      minScale: widget.minScale,
       transformationController: _controller,
       onInteractionEnd: (_) => _updateBoundaryDetection(),
-      child: widget.child,
+      onPanStart: _handleDragStart,
+      onPanUpdate: _handleDragUpdate,
+      onPanEnd: _handleDragEnd,
+      child: content,
     );
   }
 }
