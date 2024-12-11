@@ -74,7 +74,6 @@ class InteractiveViewerBoundaryState extends State<InteractiveViewerBoundary> {
   }
 
   void _updateBoundaryDetection() {
-
     final double scale = _controller!.value.row0[0];
 
     if (_scale != scale) {

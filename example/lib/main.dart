@@ -25,11 +25,18 @@ class MyApp extends StatelessWidget {
 
 class DemoSourceEntity {
   int id;
-  String url;
+  DemoSourceEntityType type;
+  String? url;
   String? previewUrl;
-  String type;
+  Color? color;
 
-  DemoSourceEntity(this.id, this.type, this.url, {this.previewUrl});
+  DemoSourceEntity({
+    required this.id,
+    this.type = DemoSourceEntityType.image,
+    this.url,
+    this.previewUrl,
+    this.color,
+  });
 }
 
 class InteractiveviewDemoPage extends StatefulWidget {
@@ -40,17 +47,31 @@ class InteractiveviewDemoPage extends StatefulWidget {
       _InteractiveviewDemoPageState();
 }
 
+enum DemoSourceEntityType { image, video }
+
 class _InteractiveviewDemoPageState extends State<InteractiveviewDemoPage> {
   List<DemoSourceEntity> sourceList = [
-    DemoSourceEntity(0, 'image', 'http://file.jinxianyun.com/inter_06.jpg'),
-    DemoSourceEntity(1, 'image', 'http://file.jinxianyun.com/inter_05.jpg'),
-    DemoSourceEntity(2, 'image', 'http://file.jinxianyun.com/inter_02.jpg'),
-    DemoSourceEntity(3, 'image', 'http://file.jinxianyun.com/inter_03.gif'),
-    DemoSourceEntity(4, 'video', 'http://file.jinxianyun.com/inter_04.mp4',
-        previewUrl: 'http://file.jinxianyun.com/inter_04_pre.png'),
-    DemoSourceEntity(5, 'video',
-        'http://file.jinxianyun.com/6438BF272694486859D5DE899DD2D823.mp4',
-        previewUrl: 'http://file.jinxianyun.com/102.png'),
+    DemoSourceEntity(
+      id: 0,
+      // url: 'http://file.jinxianyun.com/inter_06.jpg',
+      color: Colors.blue,
+    ),
+    DemoSourceEntity(
+      id: 1,
+      // url: 'http://file.jinxianyun.com/inter_05.jpg',
+      color: Colors.teal,
+    ),
+    DemoSourceEntity(
+      id: 2,
+      // url: 'http://file.jinxianyun.com/inter_02.jpg',
+      color: Colors.amber,
+    ),
+    // DemoSourceEntity(3, 'image', 'http://file.jinxianyun.com/inter_03.gif'),
+    // DemoSourceEntity(4, 'video', 'http://file.jinxianyun.com/inter_04.mp4',
+    //     previewUrl: 'http://file.jinxianyun.com/inter_04_pre.png'),
+    // DemoSourceEntity(5, 'video',
+    //     'http://file.jinxianyun.com/6438BF272694486859D5DE899DD2D823.mp4',
+    //     previewUrl: 'http://file.jinxianyun.com/102.png'),
   ];
 
   @override
@@ -81,18 +102,24 @@ class _InteractiveviewDemoPageState extends State<InteractiveviewDemoPage> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            CachedNetworkImage(
-              imageUrl: source.type == 'video' ? source.previewUrl! : source.url,
-              fit: BoxFit.cover,
-              width: 100,
-              height: 100,
-            ),
-            source.type == 'video'
-                ? Icon(
-                    Icons.play_arrow,
-                    color: Colors.white,
-                  )
-                : SizedBox(),
+            if (source.url != null || source.previewUrl != null)
+              CachedNetworkImage(
+                imageUrl: source.url ?? source.previewUrl ?? '',
+                fit: BoxFit.cover,
+                width: 100,
+                height: 100,
+              )
+            else if (source.color != null)
+              Container(
+                height: 100,
+                width: 100,
+                color: source.color!,
+              ),
+            if (source.type == DemoSourceEntityType.video)
+              Icon(
+                Icons.play_arrow,
+                color: Colors.white,
+              ),
           ],
         ),
       ),
@@ -160,10 +187,18 @@ class _DemoImageItemState extends State<DemoImageItem> {
       child: Center(
         child: Hero(
           tag: widget.source.id,
-          child: CachedNetworkImage(
-            imageUrl: widget.source.url,
-            fit: BoxFit.contain,
-          ),
+          child: widget.source.url != null
+              ? CachedNetworkImage(
+                  imageUrl: widget.source.url!,
+                  fit: BoxFit.contain,
+                )
+              : widget.source.color != null
+                  ? Container(
+                      height: 100,
+                      width: 100,
+                      color: widget.source.color!,
+                    )
+                  : const SizedBox.shrink(),
         ),
       ),
     );
@@ -202,7 +237,8 @@ class _DemoVideoItemState extends State<DemoVideoItem> {
   }
 
   init() async {
-    _controller = VideoPlayerController.network(widget.source.url);
+    _controller =
+        VideoPlayerController.networkUrl(Uri.parse(widget.source.url!));
     // loop play
     _controller!.setLooping(true);
     await _controller!.initialize();

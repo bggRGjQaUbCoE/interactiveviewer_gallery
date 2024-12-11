@@ -49,9 +49,8 @@ class _DisplayGestureState extends State<DisplayGesture> {
                 height: 60,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Color(0x99ffffff),
-                  borderRadius: BorderRadius.all(Radius.circular(30))
-                ),
+                    color: Color(0x99ffffff),
+                    borderRadius: BorderRadius.all(Radius.circular(30))),
                 child: Icon(
                   Icons.adjust,
                   size: 40,
