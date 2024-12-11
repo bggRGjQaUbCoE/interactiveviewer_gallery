@@ -8,35 +8,36 @@ class CustomDismissible extends StatefulWidget {
     required this.child,
     this.onDismissed,
     this.dismissThreshold = 0.2,
-    this.enabled = true,
+    this.enableDragToDismiss = true,
   });
 
   final Widget child;
   final double dismissThreshold;
   final VoidCallback? onDismissed;
-  final bool enabled;
+  final bool enableDragToDismiss;
 
   @override
-  _CustomDismissibleState createState() => _CustomDismissibleState();
+  State<CustomDismissible> createState() => _CustomDismissibleState();
 }
 
-class _CustomDismissibleState extends State<CustomDismissible> with SingleTickerProviderStateMixin {
+class _CustomDismissibleState extends State<CustomDismissible>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animateController;
-  late Animation<Offset> _moveAnimation;
+  late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<Decoration> _opacityAnimation;
 
-  double _dragExtent = 0;
-  bool _dragUnderway = false;
+  Offset _offset = Offset.zero;
+  bool _dragging = false;
 
-  bool get _isActive => _dragUnderway || _animateController.isAnimating;
+  bool get _isActive => _dragging || _animateController.isAnimating;
 
   @override
   void initState() {
     super.initState();
 
     _animateController = AnimationController(
-      duration: Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
 
@@ -51,40 +52,42 @@ class _CustomDismissibleState extends State<CustomDismissible> with SingleTicker
   }
 
   void _updateMoveAnimation() {
-    final double end = _dragExtent.sign;
+    final double endX = _offset.dx.sign * (_offset.dx.abs() / _offset.dy.abs());
+    final double endY = _offset.dy.sign;
 
-    _moveAnimation = _animateController.drive(
+    _slideAnimation = _animateController.drive(
       Tween<Offset>(
         begin: Offset.zero,
-        end: Offset(0, end),
+        end: Offset(endX, endY),
       ),
     );
 
-    _scaleAnimation = _animateController.drive(Tween<double>(
-      begin: 1,
-      end: 0.5,
-    ));
-
-
-    _opacityAnimation = DecorationTween(
-      begin: BoxDecoration(
-        color: const Color(0xFF000000),
+    _scaleAnimation = _animateController.drive(
+      Tween<double>(
+        begin: 1,
+        end: 0.25,
       ),
-      end: BoxDecoration(
-        color: const Color(0x00000000),
-      ),
-    ).animate(_animateController);
+    );
 
+    _opacityAnimation = _animateController.drive(
+      DecorationTween(
+        begin: const BoxDecoration(
+          color: Colors.black,
+        ),
+        end: const BoxDecoration(
+          color: Colors.transparent,
+        ),
+      ),
+    );
   }
 
   void _handleDragStart(DragStartDetails details) {
-    _dragUnderway = true;
+    _dragging = true;
 
     if (_animateController.isAnimating) {
-      _dragExtent = _animateController.value * context.size!.height * _dragExtent.sign;
       _animateController.stop();
     } else {
-      _dragExtent = 0.0;
+      _offset = Offset.zero;
       _animateController.value = 0.0;
     }
     setState(_updateMoveAnimation);
@@ -95,21 +98,12 @@ class _CustomDismissibleState extends State<CustomDismissible> with SingleTicker
       return;
     }
 
-    final double delta = details.primaryDelta!;
-    final double oldDragExtent = _dragExtent;
+    _offset += details.delta;
 
-    if (_dragExtent + delta < 0) {
-      _dragExtent += delta;
-    } else if (_dragExtent + delta > 0) {
-      _dragExtent += delta;
-    }
-
-    if (oldDragExtent.sign != _dragExtent.sign) {
-      setState(_updateMoveAnimation);
-    }
+    setState(_updateMoveAnimation);
 
     if (!_animateController.isAnimating) {
-      _animateController.value = _dragExtent.abs() / context.size!.height;
+      _animateController.value = _offset.dy.abs() / context.size!.height;
     }
   }
 
@@ -118,7 +112,7 @@ class _CustomDismissibleState extends State<CustomDismissible> with SingleTicker
       return;
     }
 
-    _dragUnderway = false;
+    _dragging = false;
 
     if (_animateController.isCompleted) {
       return;
@@ -135,24 +129,24 @@ class _CustomDismissibleState extends State<CustomDismissible> with SingleTicker
     }
   }
 
+  Widget get content => DecoratedBoxTransition(
+        decoration: _opacityAnimation,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: widget.child,
+          ),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final Widget content = DecoratedBoxTransition(
-      decoration: _opacityAnimation,
-      child: SlideTransition(
-        position: _moveAnimation,
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: widget.child,
-        ),
-      ),
-    );
-
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onVerticalDragStart: widget.enabled ? _handleDragStart : null,
-      onVerticalDragUpdate: widget.enabled ? _handleDragUpdate : null,
-      onVerticalDragEnd: widget.enabled ? _handleDragEnd : null,
+      onPanStart: widget.enableDragToDismiss ? _handleDragStart : null,
+      onPanUpdate: widget.enableDragToDismiss ? _handleDragUpdate : null,
+      onPanEnd: widget.enableDragToDismiss ? _handleDragEnd : null,
       child: content,
     );
   }
