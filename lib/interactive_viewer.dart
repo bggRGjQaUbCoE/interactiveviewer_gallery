@@ -766,8 +766,8 @@ class _InteractiveViewerState extends State<InteractiveViewer>
   // Handle the start of a gesture. All of pan, scale, and rotate are handled
   // with GestureDetector's scale gesture.
   void _onScaleStart(ScaleStartDetails details) {
-    if (_transformationController?.value.getMaxScaleOnAxis() == 1.0 &&
-        details.pointerCount < 2) {
+    if (details.pointerCount < 2 &&
+        _transformationController?.value.row0.x == 1.0) {
       widget.onPanStart?.call(details);
       return;
     }
@@ -799,8 +799,8 @@ class _InteractiveViewerState extends State<InteractiveViewer>
   // Handle an update to an ongoing gesture. All of pan, scale, and rotate are
   // handled with GestureDetector's scale gesture.
   void _onScaleUpdate(ScaleUpdateDetails details) {
-    if (_transformationController?.value.getMaxScaleOnAxis() == 1.0 &&
-        details.pointerCount < 2) {
+    if (details.pointerCount < 2 &&
+        _transformationController?.value.row0.x == 1.0) {
       widget.onPanUpdate?.call(details);
       return;
     }
@@ -906,8 +906,8 @@ class _InteractiveViewerState extends State<InteractiveViewer>
   // Handle the end of a gesture of _GestureType. All of pan, scale, and rotate
   // are handled with GestureDetector's scale gesture.
   void _onScaleEnd(ScaleEndDetails details) {
-    if (_transformationController?.value.getMaxScaleOnAxis() == 1.0 &&
-        details.pointerCount < 2) {
+    if (details.pointerCount < 2 &&
+        _transformationController?.value.row0.x == 1.0) {
       widget.onPanEnd?.call(details);
       return;
     }

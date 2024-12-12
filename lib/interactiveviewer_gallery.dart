@@ -62,9 +62,6 @@ class _TweetSourceGalleryState extends State<InteractiveviewerGallery>
   /// to disable the [PageView].
   bool _enablePageView = true;
 
-  /// `true` when an source is zoomed in to disable the [CustomDismissible].
-  bool _enableDismiss = true;
-
   late Offset _doubleTapLocalPosition;
 
   int? currentIndex;
@@ -80,17 +77,9 @@ class _TweetSourceGalleryState extends State<InteractiveviewerGallery>
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
-    )
-      ..addListener(() {
+    )..addListener(() {
         _transformationController!.value =
             _animation?.value ?? Matrix4.identity();
-      })
-      ..addStatusListener((AnimationStatus status) {
-        if (status == AnimationStatus.completed && !_enableDismiss) {
-          setState(() {
-            _enableDismiss = true;
-          });
-        }
       });
 
     currentIndex = widget.initIndex;
@@ -112,24 +101,12 @@ class _TweetSourceGalleryState extends State<InteractiveviewerGallery>
     final bool initialScale = scale <= widget.minScale;
 
     if (initialScale) {
-      if (!_enableDismiss) {
-        setState(() {
-          _enableDismiss = true;
-        });
-      }
-
       if (!_enablePageView) {
         setState(() {
           _enablePageView = true;
         });
       }
     } else {
-      if (_enableDismiss) {
-        setState(() {
-          _enableDismiss = false;
-        });
-      }
-
       if (_enablePageView) {
         setState(() {
           _enablePageView = false;
@@ -204,7 +181,6 @@ class _TweetSourceGalleryState extends State<InteractiveviewerGallery>
       maxScale: widget.maxScale,
       minScale: widget.minScale,
       onDismissed: () => Navigator.of(context).pop(),
-      enableDragToDismiss: _enableDismiss,
       child: PageView.builder(
         onPageChanged: _onPageChanged,
         controller: _pageController,

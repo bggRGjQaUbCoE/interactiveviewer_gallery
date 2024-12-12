@@ -23,12 +23,10 @@ class InteractiveViewerBoundary extends StatefulWidget {
     required this.minScale,
     this.onDismissed,
     this.dismissThreshold = 0.2,
-    this.enableDragToDismiss = true,
   });
 
   final double dismissThreshold;
   final VoidCallback? onDismissed;
-  final bool enableDragToDismiss;
 
   final Widget child;
 
